@@ -1,16 +1,18 @@
 # Auto Approve GitHub Action
 
-[![CI](https://github.com/hmarr/auto-approve-action/actions/workflows/ci.yml/badge.svg?event=push)](https://github.com/hmarr/auto-approve-action/actions/workflows/ci.yml)
+[![CI](https://github.com/mindrunner/auto-approve-action/actions/workflows/ci.yml/badge.svg?event=push)](https://github.com/mindrunner/auto-approve-action/actions/workflows/ci.yml)
 
-**Name:** `hmarr/auto-approve-action`
+**Name:** `mindrunner/auto-approve-action`
 
 Automatically approve GitHub pull requests.
 
-**Important:** use v4 or later, as earlier versions use deprecated versions of node. If you're on an old version of GHES (with an old version of the node interpreter) you may need to use an easier version until you can upgrade.
+This is a maintained fork of [hmarr/auto-approve-action](https://github.com/hmarr/auto-approve-action), which appears to be inactive. Compared to upstream v4, this fork runs on Node 24 (upstream's `node20` runtime is [deprecated on GitHub Actions runners](https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/)) and has all dependencies updated.
+
+**Important:** use v5 or later, as earlier versions use deprecated versions of node. If you're on an old version of GHES (with an old version of the node interpreter) you may need to use an earlier version until you can upgrade.
 
 ## Usage instructions
 
-Create a workflow file (e.g. `.github/workflows/auto-approve.yml`) that contains a step that `uses: hmarr/auto-approve-action@v4`. Here's an example workflow file:
+Create a workflow file (e.g. `.github/workflows/auto-approve.yml`) that contains a step that `uses: mindrunner/auto-approve-action@v5`. Here's an example workflow file:
 
 ```yaml
 name: Auto approve
@@ -22,7 +24,7 @@ jobs:
     permissions:
       pull-requests: write
     steps:
-      - uses: hmarr/auto-approve-action@v4
+      - uses: mindrunner/auto-approve-action@v5
 ```
 
 Combine with an `if` clause to only auto-approve certain users. For example, to auto-approve [Dependabot][dependabot] pull requests, use:
@@ -39,7 +41,7 @@ jobs:
       pull-requests: write
     if: github.actor == 'dependabot[bot]'
     steps:
-      - uses: hmarr/auto-approve-action@v4
+      - uses: mindrunner/auto-approve-action@v5
 ```
 
 If you want to use this action from a workflow file that doesn't run on the `pull_request` or `pull_request_target` events, use the `pull-request-number` input:
@@ -60,7 +62,7 @@ jobs:
     permissions:
       pull-requests: write
     steps:
-    - uses: hmarr/auto-approve-action@v4
+    - uses: mindrunner/auto-approve-action@v5
       with:
         pull-request-number: ${{ github.event.inputs.pullRequestNumber }}
 ```
@@ -79,7 +81,7 @@ jobs:
       pull-requests: write
     if: github.actor == 'dependabot[bot]'
     steps:
-      - uses: hmarr/auto-approve-action@v4
+      - uses: mindrunner/auto-approve-action@v5
         with:
           review-message: "Auto approved automated PR"
 ```
@@ -99,7 +101,7 @@ jobs:
   auto-approve:
     runs-on: ubuntu-latest
     steps:
-      - uses: hmarr/auto-approve-action@v4
+      - uses: mindrunner/auto-approve-action@v5
         with:
           github-token: ${{ secrets.SOME_USERS_PAT }}
 ```
@@ -122,4 +124,4 @@ If you're using a [CODEOWNERS file](https://docs.github.com/en/github/creating-c
 
 ## Development and release process
 
-Each major version corresponds to a branch (e.g. `v3`, `v4`). The latest major version (`v4` at the time of writing) is the repository's default branch. Releases are tagged with semver-style version numbers (e.g. `v1.2.3`).
+Development happens on the `main` branch. Releases are tagged with semver-style version numbers (e.g. `v5.0.0`), and each major version has a floating tag (e.g. `v5`) that points at the latest release in that series. Historical major versions from upstream live on branches (`v2`, `v3`, `v4`).

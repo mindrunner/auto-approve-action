@@ -1,31 +1,32 @@
-import * as core from "@actions/core";
-import * as github from "@actions/github";
-import { Context } from "@actions/github/lib/context";
-import { setupServer } from "msw/node";
-import { approve } from "./approve";
-import { run } from "./main";
+import { jest } from "@jest/globals";
 
-jest.mock("./approve");
-const mockedApprove = jest.mocked(approve);
+// All three modules main.ts depends on are ESM-only (or under test), so they
+// have to be mocked before main.ts is imported.
+const core = {
+  setFailed: jest.fn(),
+  info: jest.fn(),
+  getInput: jest.fn((name: string): string => {
+    const value = process.env[`INPUT_${name.replace(/ /g, "_").toUpperCase()}`];
+    return value ?? "";
+  }),
+};
+jest.unstable_mockModule("@actions/core", () => core);
 
-jest.mock("@actions/github");
-const mockedGithub = jest.mocked(github);
+const mockContext: { payload: Record<string, any> } = { payload: {} };
+jest.unstable_mockModule("@actions/github", () => ({
+  context: mockContext,
+}));
 
-afterAll(() => {
-  jest.unmock("./approve");
-  jest.unmock("@actions/github");
-});
+const mockedApprove = jest.fn();
+jest.unstable_mockModule("./approve.js", () => ({ approve: mockedApprove }));
+
+const { run } = await import("./main.js");
 
 const originalEnv = process.env;
 
-const mockServer = setupServer();
-beforeAll(() => mockServer.listen({ onUnhandledRequest: "error" }));
-afterAll(() => mockServer.close());
-
 beforeEach(() => {
-  jest.restoreAllMocks();
-  mockedApprove.mockReset();
-  jest.spyOn(core, "setFailed").mockImplementation(jest.fn());
+  jest.clearAllMocks();
+  mockContext.payload = {};
 
   process.env = {
     GITHUB_REPOSITORY: "hmarr/test",
@@ -38,7 +39,7 @@ afterEach(() => {
 });
 
 test("passes the review message to approve", async () => {
-  mockedGithub.context = ghContext();
+  mockContext.payload = { pull_request: { number: 101 } };
   process.env["INPUT_REVIEW-MESSAGE"] = "LGTM";
   await run();
   expect(mockedApprove).toHaveBeenCalledWith({
@@ -50,7 +51,7 @@ test("passes the review message to approve", async () => {
 });
 
 test("calls approve when no PR number is provided", async () => {
-  mockedGithub.context = ghContext();
+  mockContext.payload = { pull_request: { number: 101 } };
   await run();
   expect(mockedApprove).toHaveBeenCalledWith({
     token: "tok-xyz",
@@ -75,14 +76,7 @@ test("errors when an invalid PR number is provided", async () => {
   process.env["INPUT_PULL-REQUEST-NUMBER"] = "not a number";
   await run();
   expect(mockedApprove).not.toHaveBeenCalled();
+  expect(core.setFailed).toHaveBeenCalledWith(
+    expect.stringContaining("Invalid `pull-request-number` value"),
+  );
 });
-
-function ghContext(): Context {
-  const ctx = new Context();
-  ctx.payload = {
-    pull_request: {
-      number: 101,
-    },
-  };
-  return ctx;
-}

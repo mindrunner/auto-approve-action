@@ -1,8 +1,11 @@
 import * as core from "@actions/core";
 import * as github from "@actions/github";
 import { RequestError } from "@octokit/request-error";
-import { Context } from "@actions/github/lib/context";
-import { GitHub } from "@actions/github/lib/utils";
+
+// @actions/github v9 no longer exposes the Context class or the GitHub
+// constructor through its package exports, so derive the types instead.
+export type Context = typeof github.context;
+type Octokit = ReturnType<typeof github.getOctokit>;
 
 interface ApproveOptions {
   token: string;
@@ -130,9 +133,7 @@ export async function approve({
   return true;
 }
 
-async function getLoginForToken(
-  client: InstanceType<typeof GitHub>,
-): Promise<string> {
+async function getLoginForToken(client: Octokit): Promise<string> {
   try {
     const { data: user } = await client.rest.users.getAuthenticated();
     return user.login;

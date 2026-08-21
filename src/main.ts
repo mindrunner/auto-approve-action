@@ -1,6 +1,6 @@
 import * as core from "@actions/core";
 import * as github from "@actions/github";
-import { approve } from "./approve";
+import { approve } from "./approve.js";
 
 export async function run() {
   try {
@@ -37,8 +37,4 @@ function prNumber(): number {
     );
   }
   return github.context.payload.pull_request.number;
-}
-
-if (require.main === module) {
-  run();
 }

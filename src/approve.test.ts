@@ -1,15 +1,22 @@
-import * as core from "@actions/core";
-import { Context } from "@actions/github/lib/context";
-import { approve } from "./approve";
+import { jest } from "@jest/globals";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
+import type { Context } from "./approve.js";
+
+// @actions/core is ESM-only, so module namespace exports can't be spied on
+// directly - the module has to be mocked before importing the code under test.
+const core = {
+  info: jest.fn(),
+  setFailed: jest.fn(),
+};
+jest.unstable_mockModule("@actions/core", () => core);
+
+const { approve } = await import("./approve.js");
 
 const originalEnv = process.env;
 
 beforeEach(() => {
-  jest.restoreAllMocks();
-  jest.spyOn(core, "setFailed").mockImplementation(jest.fn());
-  jest.spyOn(core, "info").mockImplementation(jest.fn());
+  jest.clearAllMocks();
 
   process.env = { GITHUB_REPOSITORY: "hmarr/test" };
 });
@@ -70,7 +77,7 @@ test("a review is successfully created with a PAT", async () => {
     await approve({
       token: "gh-tok",
       context: ghContext(),
-      octokitOpts: { request: fetch },
+      octokitOpts: { request: { fetch } },
     }),
   ).toBeTruthy();
   expect(createReview.isDone()).toBe(true);
@@ -86,7 +93,7 @@ test("a review is successfully created with an Actions token", async () => {
     await approve({
       token: "gh-tok",
       context: ghContext(),
-      octokitOpts: { request: fetch },
+      octokitOpts: { request: { fetch } },
     }),
   ).toBeTruthy();
   expect(createReview.isDone()).toBe(true);
@@ -103,7 +110,7 @@ test("when a review is successfully created with message", async () => {
       token: "gh-tok",
       context: ghContext(),
       reviewMessage: "Review body",
-      octokitOpts: { request: fetch },
+      octokitOpts: { request: { fetch } },
     }),
   ).toBeTruthy();
   expect(createReview.isDone()).toBe(true);
@@ -128,7 +135,7 @@ test("when a review is successfully created using pull-request-number", async ()
       token: "gh-tok",
       context: ghContext(),
       prNumber: 102,
-      octokitOpts: { request: fetch },
+      octokitOpts: { request: { fetch } },
     }),
   ).toBeTruthy();
 
@@ -151,7 +158,7 @@ test("when a review has already been approved by current user", async () => {
     await approve({
       token: "gh-tok",
       context: ghContext(),
-      octokitOpts: { request: fetch },
+      octokitOpts: { request: { fetch } },
     }),
   ).toBeFalsy();
 
@@ -180,7 +187,7 @@ test("when a review is pending", async () => {
       token: "gh-tok",
       context: ghContext(),
       prNumber: 101,
-      octokitOpts: { request: fetch },
+      octokitOpts: { request: { fetch } },
     }),
   ).toBeTruthy();
   expect(createReview.isDone()).toBe(true);
@@ -203,7 +210,7 @@ test("when a review is dismissed", async () => {
       token: "gh-tok",
       context: ghContext(),
       prNumber: 101,
-      octokitOpts: { request: fetch },
+      octokitOpts: { request: { fetch } },
     }),
   ).toBeTruthy();
   expect(createReview.isDone()).toBe(true);
@@ -231,7 +238,7 @@ test("when a review is dismissed, but an earlier review is approved", async () =
       token: "gh-tok",
       context: ghContext(),
       prNumber: 101,
-      octokitOpts: { request: fetch },
+      octokitOpts: { request: { fetch } },
     }),
   ).toBeTruthy();
   expect(createReview.isDone()).toBe(true);
@@ -254,7 +261,7 @@ test("when a review is not approved", async () => {
       token: "gh-tok",
       context: ghContext(),
       prNumber: 101,
-      octokitOpts: { request: fetch },
+      octokitOpts: { request: { fetch } },
     }),
   ).toBeTruthy();
   expect(createReview.isDone()).toBe(true);
@@ -277,7 +284,7 @@ test("when a review is commented", async () => {
       token: "gh-tok",
       context: ghContext(),
       prNumber: 101,
-      octokitOpts: { request: fetch },
+      octokitOpts: { request: { fetch } },
     }),
   ).toBeTruthy();
   expect(createReview.isDone()).toBe(true);
@@ -300,7 +307,7 @@ test("when a review has already been approved by another user", async () => {
       token: "gh-tok",
       context: ghContext(),
       prNumber: 101,
-      octokitOpts: { request: fetch },
+      octokitOpts: { request: { fetch } },
     }),
   ).toBeTruthy();
   expect(createReview.isDone()).toBe(true);
@@ -323,7 +330,7 @@ test("when a review has already been approved by unknown user", async () => {
       token: "gh-tok",
       context: ghContext(),
       prNumber: 101,
-      octokitOpts: { request: fetch },
+      octokitOpts: { request: { fetch } },
     }),
   ).toBeTruthy();
   expect(createReview.isDone()).toBe(true);
@@ -350,7 +357,7 @@ test("when a review has been previously approved by user and but requests a re-r
       token: "gh-tok",
       context: ghContext(),
       prNumber: 101,
-      octokitOpts: { request: fetch },
+      octokitOpts: { request: { fetch } },
     }),
   ).toBeTruthy();
   expect(createReview.isDone()).toBe(true);
@@ -361,8 +368,8 @@ test("without a pull request", async () => {
   expect(
     await approve({
       token: "gh-tok",
-      context: new Context(),
-      octokitOpts: { request: fetch },
+      context: ghContext({}),
+      octokitOpts: { request: { fetch } },
     }),
   ).toBeFalsy();
   expect(createReview.isDone()).toBe(false);
@@ -381,7 +388,7 @@ test("when the token is invalid", async () => {
     await approve({
       token: "gh-tok",
       context: ghContext(),
-      octokitOpts: { request: fetch },
+      octokitOpts: { request: { fetch } },
     }),
   ).toBeFalsy();
   expect(createReview.isDone()).toBe(false);
@@ -402,7 +409,7 @@ test("when the token doesn't have write permissions", async () => {
     await approve({
       token: "gh-tok",
       context: ghContext(),
-      octokitOpts: { request: fetch },
+      octokitOpts: { request: { fetch } },
     }),
   ).toBeFalsy();
   expect(core.setFailed).toHaveBeenCalledWith(
@@ -422,7 +429,7 @@ test("when a user tries to approve their own pull request", async () => {
     await approve({
       token: "gh-tok",
       context: ghContext(),
-      octokitOpts: { request: fetch },
+      octokitOpts: { request: { fetch } },
     }),
   ).toBeFalsy();
   expect(core.setFailed).toHaveBeenCalledWith(
@@ -440,7 +447,7 @@ test("when pull request does not exist or the token doesn't have access", async 
     await approve({
       token: "gh-tok",
       context: ghContext(),
-      octokitOpts: { request: fetch },
+      octokitOpts: { request: { fetch } },
     }),
   ).toBeFalsy();
   expect(createReview.isDone()).toBe(false);
@@ -461,7 +468,7 @@ test("when the token is read-only", async () => {
     await approve({
       token: "gh-tok",
       context: ghContext(),
-      octokitOpts: { request: fetch },
+      octokitOpts: { request: { fetch } },
     }),
   ).toBeFalsy();
   expect(core.setFailed).toHaveBeenCalledWith(
@@ -481,7 +488,7 @@ test("when the token doesn't have write access to the repository", async () => {
     await approve({
       token: "gh-tok",
       context: ghContext(),
-      octokitOpts: { request: fetch },
+      octokitOpts: { request: { fetch } },
     }),
   ).toBeFalsy();
   expect(core.setFailed).toHaveBeenCalledWith(
@@ -489,12 +496,16 @@ test("when the token doesn't have write access to the repository", async () => {
   );
 });
 
-function ghContext(): Context {
-  const ctx = new Context();
-  ctx.payload = {
-    pull_request: {
-      number: 101,
+// @actions/github v9 no longer exports the Context class, so build a minimal
+// stand-in exposing the two members approve() uses: `payload` and `repo`.
+function ghContext(
+  payload: object = { pull_request: { number: 101 } },
+): Context {
+  return {
+    payload,
+    get repo(): { owner: string; repo: string } {
+      const [owner, repo] = (process.env.GITHUB_REPOSITORY ?? "/").split("/");
+      return { owner, repo };
     },
-  };
-  return ctx;
+  } as unknown as Context;
 }

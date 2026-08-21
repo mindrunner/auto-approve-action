@@ -1,6 +1,8 @@
-module.exports = {
-  preset: 'ts-jest',
-  transform: {
-    '^.+\\.(ts|tsx)?$': 'ts-jest'
-  }
-}
+import { createDefaultEsmPreset } from "ts-jest";
+
+export default {
+  ...createDefaultEsmPreset(),
+  moduleNameMapper: {
+    "^(\\.{1,2}/.*)\\.js$": "$1",
+  },
+};
